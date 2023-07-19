@@ -76,6 +76,85 @@ export const getData = async (
 
 <br/>
 
+## API 호출시 로컬 캐싱
+```ts
+
+import { AxiosResponse } from 'axios';
+
+export async function setCachedData(
+  cacheName: string,
+  url: string,
+  response: AxiosResponse<any, any>,
+) {
+  // cache open
+  const cacheStorage = await caches.open(cacheName);
+  const init = {
+    headers: {
+      'Content-Type': 'application/json, charset=utf-8',
+      'content-length': '2',
+    },
+  };
+
+  const clonedResponse = new Response(JSON.stringify(response), init);
+  await cacheStorage.put(url, clonedResponse);
+
+  return;
+}
+
+export async function getCachedData(cacheName: string, url: string) {
+  try {
+    const cacheStorage = await caches.open(cacheName);
+    const cachedResponse = await cacheStorage.match(url);
+
+    if (!cachedResponse || !cachedResponse.ok) {
+      return false;
+    }
+
+    return await cachedResponse.json();
+  } catch (error) {
+    console.error('Error while getting data from cache:', error);
+    return false;
+  }
+}
+```
+- cache storage를 사용하기 위한 cache 코드를 분리해 구현했습니다.
+
+```jsx
+export const getData = async (
+  search: string,
+): Promise<RecommendValueType[]> => {
+  try {
+    const cacheName = `cache_${search}`;
+    const url = `${base_url}?q=${search}`;
+
+    let cacheData = await getCachedData(cacheName, url);
+
+    if (cacheData) {
+      return cacheData;
+    }
+
+    if (search === '') {
+      return [];
+    }
+    const response = await axios.get(`${base_url}?q=${search}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {
+        name: search,
+      },
+    });
+
+    await setCachedData(cacheName, url, response);
+
+    console.log(response.data);
+    return response.data;
+```
+- 구현한 cache 코드를 사용해서 axios api 호출 시 캐싱 되도록 구현했습니다.
+- cache storage에 값이 저장되어 캐시된 응답이 있다면 이전 데이터를 사용하고 없다면 api를 호출해 그 데이터를 캐시에 저장하게 됩니다.
+
+<br />
+
 ## API 호출 횟수 줄이기
 - 사용자가 input에 값을 입력할 때마다 api가 호출됩니다.
 - 이렇게 된다면 서버에 요청을 많이 하게 되는 것과 같아 서버에 과부화를 일으킬 수 있습니다.
