@@ -1,6 +1,3 @@
-# git rebase practice
+# practice git rebase
 
-리베이스 또 해요.
-<br/>
-좀 이따 충돌 내봐야지
-업데이트
+git rebase 실습 레포지토리 입니다.
